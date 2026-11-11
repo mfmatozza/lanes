@@ -1,0 +1,16 @@
+{
+  "name": "@lanes/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "lanes": "./src/cli.ts"
+  },
+  "exports": {
+    "./*": "./src/*"
+  },
+  "dependencies": {
+    "@lanes/core": "*"
+  },
+  "license": "Apache-2.0"
+}

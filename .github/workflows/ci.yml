@@ -1,0 +1,28 @@
+# Typecheck, build and test the packages on Linux and Windows (macOS on main and manual runs: 10x cost on private repos).
+name: ci
+on:
+  pull_request:
+    paths: ["packages/**", "scripts/**", "package*.json", "tsconfig.json", ".github/workflows/ci.yml"]
+  push:
+    branches: [main]
+    paths: ["packages/**", "scripts/**", "package*.json", "tsconfig.json", ".github/workflows/ci.yml"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ github.event_name != 'pull_request' && fromJSON('["ubuntu-latest","windows-latest","macos-latest"]') || fromJSON('["ubuntu-latest","windows-latest"]') }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+        env:
+          LANES_AUTOSTART: "0"

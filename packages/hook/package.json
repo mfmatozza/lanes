@@ -1,0 +1,13 @@
+{
+  "name": "@lanes/hook",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*"
+  },
+  "dependencies": {
+    "@lanes/core": "*"
+  },
+  "license": "Apache-2.0"
+}

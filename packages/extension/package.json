@@ -1,0 +1,495 @@
+{
+  "name": "lanes",
+  "displayName": "Lanes",
+  "description": "See every teammate's coding agents and the files they hold. Coordinates agents so they never collide, without ever blocking an edit.",
+  "version": "0.3.0",
+  "publisher": "MicheleFMatozza",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mfmatozza/lanes.git",
+    "directory": "packages/extension"
+  },
+  "bugs": {
+    "url": "https://github.com/mfmatozza/lanes/issues"
+  },
+  "homepage": "https://github.com/mfmatozza/lanes",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "keywords": [
+    "claude code",
+    "claude",
+    "ai agents",
+    "coding agents",
+    "multi-agent",
+    "collaboration",
+    "team",
+    "merge conflicts",
+    "git"
+  ],
+  "preview": true,
+  "galleryBanner": {
+    "color": "#0f1115",
+    "theme": "dark"
+  },
+  "icon": "media/icon.png",
+  "main": "./dist/extension.cjs",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Lanes runs git and a local coordination server in your repository, so it needs a trusted folder."
+    }
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "lanes",
+          "title": "Lanes",
+          "icon": "media/lanes.svg"
+        }
+      ]
+    },
+    "views": {
+      "lanes": [
+        {
+          "id": "lanes.agents",
+          "name": "Agents"
+        },
+        {
+          "id": "lanes.tasks",
+          "name": "Tasks"
+        },
+        {
+          "id": "lanes.team",
+          "name": "Team"
+        }
+      ]
+    },
+    "walkthroughs": [
+      {
+        "id": "lanes.start",
+        "title": "Get started with Lanes",
+        "description": "Three steps from install to your first agent in the Agents view, and team context when you want it.",
+        "steps": [
+          {
+            "id": "lanes.start.server",
+            "title": "Working alone? Nothing to start",
+            "description": "Working alone, Lanes starts by itself with your first Claude Code session, so you can go straight to the next step. For a team, one person starts the team server and sends everyone the join message (see the notes on the right).\n[Start Local Server](command:lanes.startServer)\n[Copy Team Server Command](command:lanes.copyServerCommand)\n[Join Team Server](command:lanes.joinTeam)",
+            "completionEvents": [
+              "onCommand:lanes.startServer"
+            ],
+            "media": {
+              "markdown": "media/walkthrough/server.md"
+            }
+          },
+          {
+            "id": "lanes.start.setup",
+            "title": "Set up this repository",
+            "description": "Adds the Lanes hook to the open repository and commits it. Push the commit so teammates get it.\n[Set Up Repository](command:lanes.setupRepository)",
+            "completionEvents": [
+              "onCommand:lanes.setupRepository"
+            ],
+            "media": {
+              "markdown": "media/walkthrough/setup.md"
+            }
+          },
+          {
+            "id": "lanes.start.agent",
+            "title": "Run a Claude Code session",
+            "description": "Start Claude Code in the repository. Its agent appears in the Lanes view, and the files it edits get a badge in the Explorer. Lanes never blocks an edit.\n[Open the Agents View](command:lanes.agents.focus)",
+            "completionEvents": [
+              "onContext:lanes.sawAgent"
+            ],
+            "media": {
+              "markdown": "media/walkthrough/agent.md"
+            }
+          },
+          {
+            "id": "lanes.start.team",
+            "title": "Optional: share team context with agents",
+            "description": "Off until you turn it on. Agents in the repository then get a short team brief with each prompt and a heads-up before they touch a file a teammate is changing. Commit .lanes/team.json so teammates get it. The Team view and the browser app hold the team chat and requests.\n[Turn On Team Context](command:lanes.teamContextOn)\n[Open Team App](command:lanes.openApp)",
+            "completionEvents": [
+              "onCommand:lanes.teamContextOn",
+              "onCommand:lanes.openApp"
+            ],
+            "media": {
+              "markdown": "media/walkthrough/team.md"
+            }
+          }
+        ]
+      }
+    ],
+    "viewsWelcome": [
+      {
+        "view": "lanes.agents",
+        "when": "lanes.agentsState == loading",
+        "contents": "Connecting to Lanesâ€¦"
+      },
+      {
+        "view": "lanes.agents",
+        "when": "lanes.agentsState == offline",
+        "contents": "Coordination paused: Lanes can't reach its server. Your edits still go ahead, uncoordinated.\nWorking alone? Set up the repository, then start Claude Code in it: Lanes starts by itself.\n[Set Up Repository](command:lanes.setupRepository)\n[Start Local Server](command:lanes.startServer)\n[Reconnect](command:lanes.reconnect)\n[Get Started](command:workbench.action.openWalkthrough?%22MicheleFMatozza.lanes%23lanes.start%22)"
+      },
+      {
+        "view": "lanes.agents",
+        "when": "lanes.agentsState == refused",
+        "contents": "Coordination paused: the Lanes server did not accept your token. Your edits still go ahead.\nIf your team uses personal tokens, sign in with GitHub (lanes login) or run the lanes join command your admin sent you. Otherwise paste the team token in the setting.\n[Copy Sign-In Command](command:lanes.copySignInCommand)\n[Open Token Setting](command:workbench.action.openSettings?%22lanes.token%22)\n[Reconnect](command:lanes.reconnect)"
+      },
+      {
+        "view": "lanes.agents",
+        "when": "lanes.agentsState == error",
+        "contents": "Coordination paused: the Lanes server answered with an error. Your edits still go ahead.\n[Show Log](command:lanes.showLog)\n[Reconnect](command:lanes.reconnect)"
+      },
+      {
+        "view": "lanes.tasks",
+        "when": "lanes.tasksState == loading",
+        "contents": "Connecting to Lanesâ€¦"
+      },
+      {
+        "view": "lanes.tasks",
+        "when": "lanes.tasksState == offline",
+        "contents": "Coordination paused: Lanes can't reach its server, so tasks can't be shown. Your edits still go ahead.\n[Reconnect](command:lanes.reconnect)"
+      },
+      {
+        "view": "lanes.tasks",
+        "when": "lanes.tasksState == refused",
+        "contents": "Coordination paused: the Lanes server did not accept your token. Your edits still go ahead.\n[Copy Sign-In Command](command:lanes.copySignInCommand)\n[Open Token Setting](command:workbench.action.openSettings?%22lanes.token%22)\n[Reconnect](command:lanes.reconnect)"
+      },
+      {
+        "view": "lanes.tasks",
+        "when": "lanes.tasksState == error",
+        "contents": "Coordination paused: the Lanes server answered with an error. Your edits still go ahead.\n[Show Log](command:lanes.showLog)\n[Reconnect](command:lanes.reconnect)"
+      },
+      {
+        "view": "lanes.tasks",
+        "when": "lanes.tasksState == empty",
+        "contents": "No tasks yet. Each prompt you give an agent becomes a task here, and tasks that touch the same files are flagged."
+      },
+      {
+        "view": "lanes.agents",
+        "when": "lanes.agentsState == empty",
+        "contents": "Lanes is running. No agents yet: start Claude Code in a repository set up with Lanes and its agent shows up here within a second, next to your teammates' agents.\n[Set Up Repository](command:lanes.setupRepository)\n[Get Started](command:workbench.action.openWalkthrough?%22MicheleFMatozza.lanes%23lanes.start%22)\n[Open Team App](command:lanes.openApp)"
+      },
+      {
+        "view": "lanes.team",
+        "when": "lanes.teamState == loading",
+        "contents": "Connecting to Lanesâ€¦"
+      },
+      {
+        "view": "lanes.team",
+        "when": "lanes.teamState == offline",
+        "contents": "Coordination paused: Lanes can't reach its server, so team chat and requests are unavailable. Your edits still go ahead.\n[Reconnect](command:lanes.reconnect)\n[Start Local Server](command:lanes.startServer)"
+      },
+      {
+        "view": "lanes.team",
+        "when": "lanes.teamState == refused",
+        "contents": "The Lanes server did not accept your token, so team chat and requests are unavailable.\nIf your team uses personal tokens, sign in with GitHub (lanes login) or run the lanes join command your admin sent you.\n[Copy Sign-In Command](command:lanes.copySignInCommand)\n[Open Token Setting](command:workbench.action.openSettings?%22lanes.token%22)\n[Reconnect](command:lanes.reconnect)"
+      },
+      {
+        "view": "lanes.team",
+        "when": "lanes.teamState == error",
+        "contents": "The Lanes server answered with an error, so team chat and requests are unavailable.\n[Show Log](command:lanes.showLog)\n[Reconnect](command:lanes.reconnect)"
+      }
+    ],
+    "colors": [
+      {
+        "id": "lanes.heldByTeammate",
+        "description": "Explorer badge and lock colour for a file a teammate's agent holds.",
+        "defaults": {
+          "dark": "#f0a35e",
+          "light": "#b85c00",
+          "highContrast": "#ffb86b",
+          "highContrastLight": "#a35200"
+        }
+      },
+      {
+        "id": "lanes.heldByYou",
+        "description": "Explorer badge and lock colour for a file your own agent holds.",
+        "defaults": {
+          "dark": "#8fb4ff",
+          "light": "#2f6fdf",
+          "highContrast": "#a9c6ff",
+          "highContrastLight": "#1f56c0"
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "lanes.openTaskFile",
+        "title": "Lanes: Open Overlapping File"
+      },
+      {
+        "command": "lanes.startServer",
+        "title": "Lanes: Start Local Server"
+      },
+      {
+        "command": "lanes.stopServer",
+        "title": "Lanes: Stop Local Server"
+      },
+      {
+        "command": "lanes.setupRepository",
+        "title": "Lanes: Set Up Repository"
+      },
+      {
+        "command": "lanes.copyServerCommand",
+        "title": "Lanes: Copy Team Server Command"
+      },
+      {
+        "command": "lanes.copyJoinMessage",
+        "title": "Lanes: Copy Teammate Join Message"
+      },
+      {
+        "command": "lanes.joinTeam",
+        "title": "Lanes: Join Team Server"
+      },
+      {
+        "command": "lanes.reconnect",
+        "title": "Lanes: Reconnect",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "lanes.showLog",
+        "title": "Lanes: Show Log"
+      },
+      {
+        "command": "lanes.releaseLease",
+        "title": "Lanes: Release File",
+        "icon": "$(unlock)"
+      },
+      {
+        "command": "lanes.openAgentFile",
+        "title": "Lanes: Open Agent's File",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "lanes.reviewMerge",
+        "title": "Lanes: Review and Merge",
+        "icon": "$(git-compare)"
+      },
+      {
+        "command": "lanes.dismissMerge",
+        "title": "Lanes: Mark as Merged",
+        "icon": "$(check)"
+      },
+      {
+        "command": "lanes.teamSay",
+        "title": "Lanes: Message the Team",
+        "icon": "$(comment)"
+      },
+      {
+        "command": "lanes.teamAsk",
+        "title": "Lanes: Ask a Teammate's Agent",
+        "icon": "$(person-add)"
+      },
+      {
+        "command": "lanes.approveRequest",
+        "title": "Lanes: Approve Request",
+        "icon": "$(check)"
+      },
+      {
+        "command": "lanes.denyRequest",
+        "title": "Lanes: Decline Request",
+        "icon": "$(close)"
+      },
+      {
+        "command": "lanes.teamContextOn",
+        "title": "Lanes: Turn On Team Context"
+      },
+      {
+        "command": "lanes.teamContextOff",
+        "title": "Lanes: Turn Off Team Context"
+      },
+      {
+        "command": "lanes.openApp",
+        "title": "Lanes: Open Team App",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "lanes.copySignInCommand",
+        "title": "Lanes: Copy Sign-In Command"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "lanes.reconnect",
+          "when": "view == lanes.agents || view == lanes.tasks",
+          "group": "navigation"
+        },
+        {
+          "command": "lanes.teamSay",
+          "when": "view == lanes.team",
+          "group": "navigation@1"
+        },
+        {
+          "command": "lanes.teamAsk",
+          "when": "view == lanes.team",
+          "group": "navigation@2"
+        },
+        {
+          "command": "lanes.openApp",
+          "when": "view == lanes.team",
+          "group": "navigation@3"
+        },
+        {
+          "command": "lanes.teamContextOn",
+          "when": "view == lanes.team && lanes.teamContext == off",
+          "group": "2_team"
+        },
+        {
+          "command": "lanes.teamContextOff",
+          "when": "view == lanes.team && lanes.teamContext == on",
+          "group": "2_team"
+        },
+        {
+          "command": "lanes.copySignInCommand",
+          "when": "view == lanes.team",
+          "group": "2_team"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "lanes.releaseLease",
+          "when": "view == lanes.agents && viewItem == lease",
+          "group": "inline"
+        },
+        {
+          "command": "lanes.openAgentFile",
+          "when": "view == lanes.agents && viewItem == agent",
+          "group": "inline"
+        },
+        {
+          "command": "lanes.reviewMerge",
+          "when": "view == lanes.agents && viewItem == merge",
+          "group": "inline"
+        },
+        {
+          "command": "lanes.dismissMerge",
+          "when": "view == lanes.agents && viewItem == merge",
+          "group": "inline"
+        },
+        {
+          "command": "lanes.releaseLease",
+          "when": "view == lanes.agents && viewItem == lease",
+          "group": "1_lanes"
+        },
+        {
+          "command": "lanes.openAgentFile",
+          "when": "view == lanes.agents && viewItem == agent",
+          "group": "1_lanes"
+        },
+        {
+          "command": "lanes.reviewMerge",
+          "when": "view == lanes.agents && viewItem == merge",
+          "group": "1_lanes"
+        },
+        {
+          "command": "lanes.dismissMerge",
+          "when": "view == lanes.agents && viewItem == merge",
+          "group": "1_lanes"
+        },
+        {
+          "command": "lanes.approveRequest",
+          "when": "view == lanes.team && viewItem == request",
+          "group": "inline"
+        },
+        {
+          "command": "lanes.denyRequest",
+          "when": "view == lanes.team && viewItem == request",
+          "group": "inline"
+        },
+        {
+          "command": "lanes.approveRequest",
+          "when": "view == lanes.team && viewItem == request",
+          "group": "1_lanes"
+        },
+        {
+          "command": "lanes.denyRequest",
+          "when": "view == lanes.team && viewItem == request",
+          "group": "1_lanes"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "lanes.openTaskFile",
+          "when": "false"
+        },
+        {
+          "command": "lanes.releaseLease",
+          "when": "false"
+        },
+        {
+          "command": "lanes.openAgentFile",
+          "when": "false"
+        },
+        {
+          "command": "lanes.reviewMerge",
+          "when": "false"
+        },
+        {
+          "command": "lanes.dismissMerge",
+          "when": "false"
+        },
+        {
+          "command": "lanes.approveRequest",
+          "when": "false"
+        },
+        {
+          "command": "lanes.denyRequest",
+          "when": "false"
+        },
+        {
+          "command": "lanes.teamContextOn",
+          "when": "lanes.teamContext == off"
+        },
+        {
+          "command": "lanes.teamContextOff",
+          "when": "lanes.teamContext == on"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Lanes",
+      "properties": {
+        "lanes.serverUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:4317",
+          "scope": "machine",
+          "description": "Address of the Lanes server, for example http://192.168.1.20:4317. Left at the default, Lanes uses the server that lanes join or lanes login saved. Also saved to ~/.lanes/config.json so the agent hooks use it. A machine setting: a repository's .vscode/settings.json cannot point Lanes at another server."
+        },
+        "lanes.token": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "Token for the Lanes server: the team token, or your personal token. Leave empty to use the personal token that lanes join or lanes login saved, or, for a server on this machine, its own token. Also saved to ~/.lanes/config.json so the agent hooks use it. A machine setting: it is not synced by Settings Sync and a repository cannot set it."
+        },
+        "lanes.userName": {
+          "type": "string",
+          "default": "",
+          "description": "Your name as teammates see it. Empty uses the name lanes join or lanes login saved, then git config user.name."
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@lanes/core": "*",
+    "@lanes/cli": "*"
+  },
+  "devDependencies": {
+    "@types/vscode": "1.95.0"
+  }
+}

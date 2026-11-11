@@ -1,0 +1,50 @@
+{
+  "tasks": {
+    "i-rename": {
+      "prompt": "Rename the function priceWithTax to grossPrice everywhere: where it is defined in src/billing/prices.ts, where it is re-exported in src/billing/index.ts, and every place that calls it.",
+      "checks": [{ "file": "src/billing/prices.ts", "pattern": "function grossPrice" }],
+      "run": "import * as b from './src/billing/index.ts'; import { dispatch } from './src/index.ts'; if (typeof b.grossPrice !== 'function' || 'priceWithTax' in b) throw new Error('billing exports: ' + Object.keys(b)); const r = dispatch({ method: 'POST', path: '/orders', body: { amount: 100 } }); if (r.status !== 201 || r.body.total !== 122) throw new Error(JSON.stringify(r));"
+    },
+    "i-invoices": {
+      "prompt": "Add a POST /invoices endpoint. Create a new file src/handlers/invoices.ts with a createInvoice handler: it returns 400 with an error unless body.amount is a positive number (use isPositiveNumber from src/utils/validate.ts), otherwise 201 with body { amount, total } where total is priceWithTax(amount) from src/billing/index.ts. Register the route in src/routes.ts.",
+      "checks": [{ "file": "src/routes.ts", "pattern": "/invoices" }],
+      "run": "import { dispatch } from './src/index.ts'; const r = dispatch({ method: 'POST', path: '/invoices', body: { amount: 100 } }); if (r.status !== 201 || r.body.total !== 122) throw new Error(JSON.stringify(r)); if (dispatch({ method: 'POST', path: '/invoices', body: { amount: -1 } }).status !== 400) throw new Error('no validation');"
+    },
+    "i-add-order-object": {
+      "prompt": "Change addOrder in src/db/orders.ts so it takes one object { net: number, total: number } instead of a number, and stores both fields on the order ({ id, net, total }). Update every place that calls addOrder.",
+      "checks": [{ "file": "src/db/orders.ts", "pattern": "net" }],
+      "run": "import { dispatch } from './src/index.ts'; const r = dispatch({ method: 'POST', path: '/orders', body: { amount: 100 } }); if (r.status !== 201 || r.body.net !== 100 || r.body.total !== 122) throw new Error(JSON.stringify(r));"
+    },
+    "i-refunds": {
+      "prompt": "Add a POST /refunds endpoint. Create a new file src/handlers/refunds.ts with a createRefund handler: it returns 400 with an error unless body.amount is a positive number (use isPositiveNumber from src/utils/validate.ts), otherwise it stores a refund with addOrder from src/db/orders.ts, whose total is minus the amount with tax (use the billing module's tax function), and returns 201 with the stored order. Register the route in src/routes.ts.",
+      "checks": [{ "file": "src/routes.ts", "pattern": "/refunds" }],
+      "run": "import { dispatch } from './src/index.ts'; const r = dispatch({ method: 'POST', path: '/refunds', body: { amount: 10 } }); if (r.status !== 201 || r.body.total !== -12.2) throw new Error(JSON.stringify(r)); if (dispatch({ method: 'POST', path: '/refunds', body: { amount: 0 } }).status !== 400) throw new Error('no validation');"
+    }
+  },
+  "scenarios": {
+    "I1": {
+      "description": "Intent: a rename lands while a teammate writes a new caller in a file the renamer never touches (renamer starts first), Haiku",
+      "runs": 3,
+      "agents": [
+        { "user": "ana", "task": "i-rename" },
+        { "user": "bea", "task": "i-invoices", "delaySec": 8 }
+      ]
+    },
+    "I2": {
+      "description": "Intent: as I1, but the caller starts first and the renamer 8 s later, Haiku",
+      "runs": 3,
+      "agents": [
+        { "user": "bea", "task": "i-invoices" },
+        { "user": "ana", "task": "i-rename", "delaySec": 8 }
+      ]
+    },
+    "I3": {
+      "description": "Intent: a signature change (addOrder takes an object) while a teammate writes a new caller in a new file, Haiku",
+      "runs": 3,
+      "agents": [
+        { "user": "ana", "task": "i-add-order-object" },
+        { "user": "bea", "task": "i-refunds", "delaySec": 8 }
+      ]
+    }
+  }
+}

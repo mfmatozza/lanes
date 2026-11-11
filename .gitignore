@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.vsix
+.DS_Store
+
+# Spike run outputs (summaries are copied into docs/research)
+spike/results/
+
+# Packages runner output
+scripts/runner/results/

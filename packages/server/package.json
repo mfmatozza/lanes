@@ -1,0 +1,14 @@
+{
+  "name": "@lanes/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*"
+  },
+  "dependencies": {
+    "@lanes/core": "*",
+    "@lanes/team": "*"
+  },
+  "license": "Apache-2.0"
+}

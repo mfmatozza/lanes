@@ -1,0 +1,88 @@
+# DRAFT, NOT ACTIVE. This file lives under docs/ on purpose: GitHub only runs workflows from .github/workflows/.
+# Promote it with issue #164 (Phase 4 item 4.A1) once VSCE_PAT and OVSX_PAT exist (issues #178, #155, #161):
+#   git mv docs/engineering/publish-workflow.draft.yml .github/workflows/publish.yml
+# Then do a dry run first (the default), and only then a real run.
+#
+# Safety properties (keep them when editing):
+#   - manual dispatch only: no push, tag or schedule trigger;
+#   - dry_run defaults to true: the build job packages the .vsix and uploads it as an artifact, nothing is published;
+#   - the publish job needs dry_run=false AND the protected "release" environment (required reviewer: the founder);
+#   - it refuses to start if either token is empty, so it cannot publish to one registry and fail on the other;
+#   - tokens are only read from secrets, never echoed.
+# Unverified: the pinned tool versions and `private: true` in packages/extension/package.json (check that vsce publish accepts it).
+name: publish
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Package only; publish nothing"
+        type: boolean
+        default: true
+      pre_release:
+        description: "Publish as a pre-release (odd minor, for example 0.3.x)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+        env:
+          LANES_AUTOSTART: "0"
+      - id: v
+        run: echo "version=$(node -p "require('./packages/extension/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Package the .vsix
+        working-directory: packages/extension
+        run: npx --yes @vscode/vsce@3.2.1 package --no-dependencies ${{ inputs.pre_release && '--pre-release' || '' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lanes-vsix
+          path: packages/extension/*.vsix
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: ${{ inputs.dry_run == false }}
+    runs-on: ubuntu-latest
+    environment: release # protected: requires the founder's approval
+    permissions:
+      contents: write # to attach the .vsix to a GitHub Release
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: lanes-vsix
+      - name: Refuse to publish without both tokens
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: |
+          if [ -z "$VSCE_PAT" ] || [ -z "$OVSX_PAT" ]; then
+            echo "VSCE_PAT and OVSX_PAT must both be set in the release environment. Nothing was published." >&2
+            exit 1
+          fi
+      - name: Visual Studio Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx --yes @vscode/vsce@3.2.1 publish --packagePath ./*.vsix ${{ inputs.pre_release && '--pre-release' || '' }}
+      - name: Open VSX
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: npx --yes ovsx@0.10.1 publish ./*.vsix -p "$OVSX_PAT" ${{ inputs.pre_release && '--pre-release' || '' }}
+      - name: GitHub Release with the .vsix attached
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: gh release create "v$VERSION" ./*.vsix --repo "$GITHUB_REPOSITORY" --title "v$VERSION" --notes "See CHANGELOG.md" ${{ inputs.pre_release && '--prerelease' || '' }}
