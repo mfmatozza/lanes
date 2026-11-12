@@ -25,8 +25,9 @@ function rawUpgrade(base: string, headers: Record<string, string>, path = "/v1/e
     const req = http.request(base + path, {
       headers: { connection: "Upgrade", upgrade: "websocket", "sec-websocket-version": "13", "sec-websocket-key": crypto.randomBytes(16).toString("base64"), ...headers },
     });
-    req.on("response", (res) => { res.resume(); resolve({ status: res.statusCode ?? 0 }); });
-    req.on("upgrade", (res, socket, head) => resolve({ status: res.statusCode ?? 0, socket, head }));
+    // A refused upgrade can be followed by a reset on Windows once the answer is read: not an error of the test.
+    req.on("response", (res) => { res.on("error", () => {}); res.socket?.on("error", () => {}); res.resume(); resolve({ status: res.statusCode ?? 0 }); });
+    req.on("upgrade", (res, socket, head) => { socket.on("error", () => {}); resolve({ status: res.statusCode ?? 0, socket, head }); });
     req.on("error", reject);
     req.end();
   });

@@ -2,6 +2,8 @@
 
 Lanes keeps your team's coding agents out of each other's way when they all work in one repository.
 
+**[trylanes.app](https://trylanes.app)** · [Live demo](https://trylanes.app/app/) · [Install](#install) · [CLI](docs/cli.md) · [MCP](docs/mcp.md) · [Numbers](#numbers)
+
 ![The Lanes sidebar in VS Code: each teammate's agents and the files they hold, the tasks, and the Team view with a request to approve and the team chat](docs/images/lanes-team-dark.webp)
 
 ## The problem
@@ -28,7 +30,17 @@ On a team where everyone runs a coding agent, several agents edit the same repos
 
 ## Numbers
 
-Measured, not estimated. Each figure links to the file it comes from, with the setup and every run.
+Measured, not estimated. 389 real Claude Code sessions, 108 benchmark runs with every run published, 419 automated tests on Linux, Windows and macOS.
+
+| | Without Lanes | With Lanes |
+|---|---|---|
+| A teammate renames a function while another agent writes a new caller: build broken | 6 of 13 runs (46%), leases only | **0 of 10** with shared context |
+| An agent whose edit is refused stops and asks its human | 31% (4 of 13) | **1 of 216 sessions**: edits are queued, never refused |
+| Edits lost with 64 agents writing at once | | **0** |
+| Commits attributed to the right person | | **107 of 107** |
+| Time the check adds before an edit (p95) | | **39 ms** Linux, 68 ms Windows |
+
+Each figure links to the file it comes from, with the setup and every run.
 
 - **Hook check under 100 ms at p95.** The bundled hook, for an allowed edit, process start included, in CI: Linux 39 ms, Windows 68 ms, macOS 79 ms. Local git origin, so no network time. ([hook latency](docs/benchmark/hook-latency.md))
 - **64 agents and 60 viewers on one server.** 0 lost edits, server memory at about 70 MB RSS, 0 refused edits. 7 edits stayed committed in their clone and waited for the next publish there. All of it on one Windows machine, with a script sending the hook events at a pace far busier than real agents. ([scale test, 2 November 2026](docs/benchmark/scale-2026-11-02.md))
