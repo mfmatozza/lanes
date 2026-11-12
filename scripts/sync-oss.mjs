@@ -16,7 +16,7 @@ const DST = path.resolve(process.argv[3] ?? path.join(path.dirname(SELF), ".."))
 const REPO_URL = "https://github.com/mfmatozza/lanes";
 
 // Paths in staging that are written by hand and survive a sync.
-const KEEP = [".git", "README.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md", "CODE_OF_CONDUCT.md", ".github", "scripts/sync-oss.mjs",
+const KEEP = [".git", "README.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md", "CODE_OF_CONDUCT.md", ".github", "scripts/sync-oss.mjs", "server.json",
   "docs/README.md", // the public docs index, written by hand
 ];
 

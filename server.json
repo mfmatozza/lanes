@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.mfmatozza/lanes",
+  "title": "Lanes",
+  "description": "Shared context for a team's coding agents: what teammates' agents are changing, file checks, chat and requests.",
+  "version": "0.3.0",
+  "websiteUrl": "https://trylanes.app",
+  "repository": {
+    "url": "https://github.com/mfmatozza/lanes",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/mfmatozza/lanes/releases/download/v0.3.0/lanes-0.3.0.mcpb",
+      "fileSha256": "4c184be9fe54b6190eae9bfbdda482f1a5bcea31f487a63ef015062f2dcfdbca",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
