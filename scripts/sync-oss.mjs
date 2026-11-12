@@ -24,6 +24,7 @@ const KEEP = [".git", "README.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md", 
 const ALLOW = [
   ["packages", "packages"],
   ["scripts/build.mjs", "scripts/build.mjs"],
+  ["scripts/test.mjs", "scripts/test.mjs"],
   ["scripts/bench-hook.ts", "scripts/bench-hook.ts"],
   ["scripts/runner/run.ts", "scripts/runner/run.ts"],
   ["scripts/runner/README.md", "scripts/runner/README.md"],

@@ -104,7 +104,7 @@ describe("a repository commit hook slower than the publish is willing to wait (#
 
   test("the lease is released in time, and the commit that lands later is published by the next publish", async () => {
     const hook = path.join(repo.main, ".git", "hooks", "pre-commit");
-    fs.writeFileSync(hook, "#!/bin/sh\nsleep 4\n", { mode: 0o755 });
+    fs.writeFileSync(hook, "#!/bin/sh\nsleep 8\n", { mode: 0o755 });
     const env = { LANES_SERVER: server.url, LANES_USER: "ana", LANES_EMAIL: "ana@example.com", LANES_COMMIT_DEADLINE_MS: "400" };
     const wt = repo.wt.ana;
     const input = { session_id: "s-slow", cwd: wt, tool_name: "Write", tool_input: { file_path: path.join(wt, "src", "slow.ts") } };
@@ -114,11 +114,12 @@ describe("a repository commit hook slower than the publish is willing to wait (#
 
     const post = await runHook("post", input, env);
     assert.equal(post.code, 0, post.stderr);
-    assert.ok(post.ms < 3_500, `the hook waited for the slow commit hook (${Math.round(post.ms)} ms)`);
+    // The commit hook takes 8 s; the publish gives up after 400 ms. Spawning the hook can take seconds on a busy CI runner.
+    assert.ok(post.ms < 6_000, `the hook waited for the slow commit hook (${Math.round(post.ms)} ms)`);
     assert.equal(server.coordinator.snapshot().leases.length, 0, "lease released although nothing could be published yet");
 
     // the orphaned commit finishes on its own
-    for (let i = 0; i < 40 && !/slow\.ts/.test(git(wt, "log", "-1", "--name-only", "--format=")); i++) await new Promise((r) => setTimeout(r, 250));
+    for (let i = 0; i < 80 && !/slow\.ts/.test(git(wt, "log", "-1", "--name-only", "--format=")); i++) await new Promise((r) => setTimeout(r, 250));
     assert.match(git(wt, "log", "-1", "--name-only", "--format="), /slow\.ts/, "the commit was not killed");
     assert.doesNotMatch(git(repo.main, "ls-tree", "-r", "--name-only", "lanes/main"), /slow\.ts/);
 

@@ -125,14 +125,14 @@ describe("WS /v1/events", () => {
   });
 
   test("a client that answers pings stays connected, and a refused 129th connection does not break the others", async () => {
-    const server = await startServer({ port: 0, token: TOKEN, heartbeatMs: 100 });
+    const server = await startServer({ port: 0, token: TOKEN, heartbeatMs: 400 });
     const sockets: Duplex[] = [];
     try {
       let closed = false;
       let opened = false;
       const client = connectEvents(server.url + "/v1/events", auth, { onMessage: () => (opened = true), onClose: () => (closed = true) });
       await until(() => opened);
-      // The other 127 answer too: opening them can take longer than the 250 ms after which a silent stream is dropped (Windows).
+      // The other 127 answer too: opening them can take longer than the 1 s after which a silent stream is dropped (Windows).
       for (let i = 0; i < 127; i++) {
         const s = (await rawUpgrade(server.url, auth)).socket!;
         s.on("data", () => s.write(encodeFrame(OP.pong, Buffer.alloc(0), true)));
@@ -141,7 +141,7 @@ describe("WS /v1/events", () => {
       // Refused: a 503 answer, or on a loaded Windows machine a reset before the answer is read. Either way no stream opens.
       const refused = await rawUpgrade(server.url, auth).then((r) => r.status, (e: NodeJS.ErrnoException) => e.code);
       assert.ok(refused === 503 || refused === "ECONNRESET", `129th connection: ${refused}`);
-      await new Promise((r) => setTimeout(r, 700)); // more than 2.5 heartbeats: the real client kept answering
+      await new Promise((r) => setTimeout(r, 1300)); // more than 2.5 heartbeats (400 ms each): the real client kept answering
       assert.equal(closed, false);
       client.close();
     } finally {
