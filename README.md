@@ -4,7 +4,7 @@ Lanes keeps your team's coding agents out of each other's way when they all work
 
 **[trylanes.app](https://trylanes.app)** · [Live demo](https://trylanes.app/app/) · [Install](#install) · [CLI](docs/cli.md) · [MCP](docs/mcp.md) · [Numbers](#numbers)
 
-![The Lanes sidebar in VS Code: each teammate's agents and the files they hold, the tasks, and the Team view with a request to approve and the team chat](docs/images/lanes-team-dark.webp)
+![The Lanes browser app: a lane per file showing who holds it and who is queued, a request to approve, the team and the chat](docs/images/app-dark.webp)
 
 ## The problem
 
@@ -15,16 +15,16 @@ On a team where everyone runs a coding agent, several agents edit the same repos
 - **File leases and a queue.** An agent takes a lease on a file before it edits it. A second agent that wants the same file waits in a short queue, gets the newer version, and then goes ahead. Lanes never refuses an edit: if the server is down or the wait runs out, the edit goes ahead uncoordinated.
 - **Shared team context.** Each prompt gets a short team brief: who works on what, and new chat messages. Before an agent edits or reads a file a teammate is changing, it gets a one-line heads-up. Off until you turn it on per repository.
 - **Requests between agents.** You can ask a teammate's agent to do something. It reaches their agent only after they approve it. The MCP server has no approve tool, so only a person can approve.
-- **Everything visible.** A VS Code extension, a browser app served by the Lanes server, a CLI and an MCP server all show the same team: agents, held files, tasks, chat and requests.
+- **Everything visible, no editor required.** The CLI, the MCP server and a browser app served by your Lanes server all show the same team: agents, held files, tasks, chat and requests. A VS Code extension adds the same view as a sidebar, if you want it.
 - **Works with your agents.** Claude Code is run live. Eleven more agents work through their own hooks or plugins: Codex, Gemini CLI, Cursor, GitHub Copilot, Kiro, Antigravity, Factory Droid, Qwen Code, opencode, Kilo Code and Amp. Seven more get the team tools through MCP only: Augment, Junie, JetBrains AI Assistant, Continue, Zed, Goose and Warp. Those 18 are built from each agent's docs and have not been run against the real agents yet.
 
-![The Lanes browser app: a lane per file showing who holds it and who is queued, a request to approve, the team and the chat](docs/images/app-dark.webp)
-
-<details><summary>More of the browser app</summary>
+<details><summary>More screenshots: the lane map, the light theme, the optional VS Code sidebar</summary>
 
 ![The lane map: src/session.ts held by Bea with Dan queued, src/cart.ts held by Carl, src/settings.ts planned](docs/images/app-lanes-dark.webp)
 
 ![The browser app in the light theme](docs/images/app-light.webp)
+
+![The optional VS Code sidebar: each teammate's agents and the files they hold, the tasks, and the Team view](docs/images/lanes-team-dark.webp)
 
 </details>
 
@@ -58,31 +58,43 @@ Each figure links to the file it comes from, with the setup and every run.
 
 ## Install
 
-Lanes needs Node.js 22.18 or newer and git. The folder must be a git repository.
+Lanes runs from the terminal. You need Node.js 22.18 or newer and git; the folder must be a git repository. VS Code is optional.
 
-**VS Code extension (beta).** Download `lanes-0.3.0.vsix` from the [GitHub release](https://github.com/mfmatozza/lanes/releases), then:
-
-```sh
-code --install-extension lanes-0.3.0.vsix
-```
-
-Run **Lanes: Set Up Repository**, then start Claude Code in the repository. Its agent appears in the Lanes view. The [extension README](packages/extension/README.md) covers teams, settings and commands.
-
-**From source.**
+**1. Get the CLI.**
 
 ```sh
-npm ci && npm run build
-node dist/lanes.cjs init                       # in your repository: adds the hooks and commits them
-node dist/lanes.cjs init --agents codex,cursor  # other agents (comma-separated)
-node dist/lanes.cjs server --host 0.0.0.0      # a team server; it prints the team token
-node dist/lanes.cjs doctor                     # checks this machine and repository
+git clone https://github.com/mfmatozza/lanes
+cd lanes && npm ci && npm run build
+alias lanes="node $PWD/dist/lanes.cjs"
 ```
 
-**MCP**, for any agent that supports it:
+**2. Set up your repository** and turn on shared context. Push the commit so teammates get it.
 
 ```sh
-claude mcp add lanes -- node <path>/dist/lanes.cjs mcp
+cd your-repo
+lanes init --agents claude,codex      # hooks for each agent you use (comma-separated)
+lanes team on
+lanes doctor                          # checks this machine and repository
 ```
+
+**3. Give your agent the team tools over MCP.**
+
+```sh
+claude mcp add lanes -- node /path/to/lanes/dist/lanes.cjs mcp
+```
+
+Codex, Cursor, Gemini CLI and 15 more: [docs/mcp.md](docs/mcp.md). Lanes is also in the official MCP Registry as `io.github.mfmatozza/lanes`.
+
+**4. For a team,** one person runs the server and invites the others:
+
+```sh
+lanes server --host 0.0.0.0
+lanes invite bea                      # prints the join command for Bea
+```
+
+`lanes app` opens the team in your browser. Working alone, skip this step: the first agent session starts a local server.
+
+**Optional: the VS Code extension.** It adds a sidebar with every agent, the tasks and the Team view, and carries the same CLI. Download `lanes-0.3.0.vsix` from the [release](https://github.com/mfmatozza/lanes/releases) and run `code --install-extension lanes-0.3.0.vsix`. Details in the [extension README](packages/extension/README.md).
 
 ## How it works
 

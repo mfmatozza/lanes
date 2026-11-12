@@ -6,7 +6,7 @@ Agents with Lanes hooks (Claude Code, and the agents `lanes init --agents` sets 
 
 ## Running it
 
-`lanes mcp` is a command of the Lanes CLI. During the beta the CLI ships inside the VS Code extension, at `<extensions folder>/michelefmatozza.lanes-<version>/dist/lanes.cjs`, or you build it from a checkout of this repository with `npm run build` (it lands in `dist/lanes.cjs`). See [docs/cli.md](cli.md#running-the-cli).
+`lanes mcp` is a command of the Lanes CLI and needs no editor: your agent starts it in the background. Build the CLI once from a checkout of this repository with `npm ci && npm run build`; it lands in `dist/lanes.cjs`. The optional VS Code extension carries the same file. See [docs/cli.md](cli.md#running-the-cli). Claude Desktop and other clients that install MCP bundles can also use `lanes-0.3.0.mcpb` from the [release](https://github.com/mfmatozza/lanes/releases), listed in the official MCP Registry as `io.github.mfmatozza/lanes`.
 
 ```
 lanes mcp [--dir <repo>]

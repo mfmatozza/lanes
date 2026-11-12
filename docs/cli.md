@@ -4,22 +4,23 @@ The `lanes` command sets up a repository, runs or joins a team server, and gives
 
 ## Running the CLI
 
-During the beta there is no `lanes` on your PATH. Run it with Node (22.18 or newer) in one of two ways.
+The CLI and the MCP server run in any terminal. You do not need VS Code or any editor. During the beta there is no `lanes` on your PATH yet; you run one file with Node (22.18 or newer).
 
-From the VS Code extension, which carries the CLI:
-
-```sh
-node ~/.vscode/extensions/michelefmatozza.lanes-<version>/dist/lanes.cjs <command>
-```
-
-Cursor, Windsurf and other forks keep extensions in their own folder. Look for `michelefmatozza.lanes-<version>/dist/lanes.cjs` there.
-
-From a checkout of this repository, after a build:
+Clone and build once:
 
 ```sh
-npm run build
+git clone https://github.com/mfmatozza/lanes
+cd lanes && npm ci && npm run build
 node dist/lanes.cjs <command>
 ```
+
+An alias saves typing:
+
+```sh
+alias lanes="node /path/to/lanes/dist/lanes.cjs"
+```
+
+If you also installed the optional VS Code extension, it carries the same file, so you can skip the build and run `node ~/.vscode/extensions/michelefmatozza.lanes-<version>/dist/lanes.cjs <command>`. Cursor, Windsurf and other forks keep extensions in their own folder.
 
 `npx lanes` is planned. It is not available yet.
 
