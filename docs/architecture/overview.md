@@ -38,7 +38,7 @@ flowchart LR
 | **Coordination server** | Source of truth for agents and leases; grants or denies edits; expires leases; broadcasts state | One per team: localhost or a teammate's machine (MVP) | [Coordination model](coordination-model.md), [Protocol](protocol.md) |
 | **Hook script** (`.lanes/hook.cjs`) | Called by Claude Code at lifecycle events; turns them into protocol calls; returns allow or deny to the agent | Each developer's machine, inside every Claude Code session | [Agent integration](agent-integration.md) |
 | **VS Code extension** | Visualises agents and leases; warns humans; sets up repositories; can run a local server | Each developer's VS Code | [VS Code extension](vscode-extension.md) |
-| **Shared core library** | Shared types, repository identification, settings merging | Linked into all of the above | [Repository structure](../engineering/repository-structure.md) |
+| **Shared core library** | Shared types, repository identification, settings merging | Linked into all of the above | Repository structure |
 
 ## 3. Key flows
 
@@ -63,20 +63,20 @@ sequenceDiagram
 ```
 
 ### State to editors
-The server keeps the full state in memory and pushes a **snapshot** over WebSocket on every change (debounced by 50 ms). The state is small: dozens of agents and hundreds of leases. Snapshots keep clients simple and stateless, and that is enough for the MVP ([ADR-0011](../decisions/0011-snapshot-broadcast.md)).
+The server keeps the full state in memory and pushes a **snapshot** over WebSocket on every change (debounced by 50 ms). The state is small: dozens of agents and hundreds of leases. Snapshots keep clients simple and stateless, and that is enough for the MVP ([ADR-0011](../design.md#adr-0011)).
 
 ## 4. Architectural decisions
 | ADR | Decision |
 |---|---|
-| [0002](../decisions/0002-coordination-layer-not-editor.md) | A coordination layer, not an editor |
-| [0003](../decisions/0003-vscode-extension-first.md) | VS Code extension first |
-| [0004](../decisions/0004-git-is-source-of-truth.md) | Git is the source of truth; no CRDT for agent writes |
-| [0005](../decisions/0005-claude-code-hooks-enforcement.md) | Enforce through Claude Code hooks |
-| [0006](../decisions/0006-file-level-leases-with-ttl.md) | File-level leases with time-to-live |
-| [0007](../decisions/0007-fail-closed.md) | Fail closed by default |
-| [0008](../decisions/0008-typescript-monorepo.md) | TypeScript monorepo |
-| [0010](../decisions/0010-local-first-byo-agent.md) | Local-first, bring your own agent |
-| [0011](../decisions/0011-snapshot-broadcast.md) | Broadcast full snapshots |
+| 0002 | A coordination layer, not an editor |
+| 0003 | VS Code extension first |
+| [0004](../design.md#adr-0004) | Git is the source of truth; no CRDT for agent writes |
+| [0005](../design.md#adr-0005) | Enforce through Claude Code hooks |
+| [0006](../design.md#adr-0006) | File-level leases with time-to-live |
+| 0007 | Fail closed by default |
+| 0008 | TypeScript monorepo |
+| [0010](../design.md#adr-0010) | Local-first, bring your own agent |
+| [0011](../design.md#adr-0011) | Broadcast full snapshots |
 
 ## 5. Evolution beyond the MVP
 - **Persistence:** SQLite or Postgres, so leases survive restarts. Needed for the hosted tier.

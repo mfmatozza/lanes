@@ -16,16 +16,24 @@ On a team where everyone runs a coding agent, several agents edit the same repos
 - **Everything visible.** A VS Code extension, a browser app served by the Lanes server, a CLI and an MCP server all show the same team: agents, held files, tasks, chat and requests.
 - **Works with your agents.** Claude Code is run live. Eleven more agents work through their own hooks or plugins: Codex, Gemini CLI, Cursor, GitHub Copilot, Kiro, Antigravity, Factory Droid, Qwen Code, opencode, Kilo Code and Amp. Seven more get the team tools through MCP only: Augment, Junie, JetBrains AI Assistant, Continue, Zed, Goose and Warp. Those 18 are built from each agent's docs and have not been run against the real agents yet.
 
-![The Lanes browser app: the team, who works on which file, the chat and requests to approve](docs/images/app-dark.webp)
+![The Lanes browser app: a lane per file showing who holds it and who is queued, a request to approve, the team and the chat](docs/images/app-dark.webp)
+
+<details><summary>More of the browser app</summary>
+
+![The lane map: src/session.ts held by Bea with Dan queued, src/cart.ts held by Carl, src/settings.ts planned](docs/images/app-lanes-dark.webp)
+
+![The browser app in the light theme](docs/images/app-light.webp)
+
+</details>
 
 ## Numbers
 
 Measured, not estimated. Each figure links to the file it comes from, with the setup and every run.
 
-- **Hook check under 100 ms at p95.** The bundled hook, for an allowed edit, process start included, in CI: Linux 39 ms, Windows 68 ms, macOS 79 ms. Local git origin, so no network time. ([spike v3 report, section 5](docs/research/spike-v3-report.md#5-spike-v3b-the-risks))
-- **64 agents and 60 viewers on one server.** 0 lost edits, server memory at about 70 MB RSS, 0 refused edits. 7 edits stayed committed in their clone and waited for the next publish there. All of it on one Windows machine, with a script sending the hook events at a pace far busier than real agents. ([scale test, 2 November 2026](multiplayer/benchmark/scale-2026-11-02.md))
-- **Every server route under 2 ms at p99, except acquire.** That includes the team brief, chat and requests; single `task` calls reached up to 73 ms. Acquire includes the wait in the queue. On hot files that wait grows with the number of agents: p99 of 33 to 44 s at 32 agents and about 100 s at 64. ([same file, remaining limits](multiplayer/benchmark/scale-2026-11-02.md#remaining-limits-measured-not-fixed))
-- **Intent benchmark, first round (3 November 2026, 3 runs per arm, Haiku).** Scenarios where a new caller lands in a file the other agent never touches, so leases alone cannot help. Arm C is leases only, arm D adds team context as it was then. ([results](multiplayer/benchmark/intent-2026-11-03.md), [method](multiplayer/benchmark/method.md))
+- **Hook check under 100 ms at p95.** The bundled hook, for an allowed edit, process start included, in CI: Linux 39 ms, Windows 68 ms, macOS 79 ms. Local git origin, so no network time. ([hook latency](docs/benchmark/hook-latency.md))
+- **64 agents and 60 viewers on one server.** 0 lost edits, server memory at about 70 MB RSS, 0 refused edits. 7 edits stayed committed in their clone and waited for the next publish there. All of it on one Windows machine, with a script sending the hook events at a pace far busier than real agents. ([scale test, 2 November 2026](docs/benchmark/scale-2026-11-02.md))
+- **Every server route under 2 ms at p99, except acquire.** That includes the team brief, chat and requests; single `task` calls reached up to 73 ms. Acquire includes the wait in the queue. On hot files that wait grows with the number of agents: p99 of 33 to 44 s at 32 agents and about 100 s at 64. ([same file, remaining limits](docs/benchmark/scale-2026-11-02.md#remaining-limits-measured-not-fixed))
+- **Intent benchmark, first round (3 November 2026, 3 runs per arm, Haiku).** Scenarios where a new caller lands in a file the other agent never touches, so leases alone cannot help. Arm C is leases only, arm D adds team context as it was then. ([results](docs/benchmark/intent-2026-11-03.md), [method](docs/benchmark/method.md))
 
   | Scenario | C | D |
   |---|---|---|
@@ -34,7 +42,7 @@ Measured, not estimated. Each figure links to the file it comes from, with the s
   | I3: signature change, new caller 8 s later | 2 of 3 | 0 of 3 |
 
   Team context as worded then did not fix the conflict. No agent in any run stopped to ask its user.
-- **Intent benchmark, second round (9 November 2026, 10 runs per arm, Haiku).** Arm D2 is the team context that ships in 0.3.0: a heads-up when an agent reads a teammate's file, a one-time check at the end of a turn when a file it depends on changed, and new wording. Its success bar was fixed before any run ([method, arm D2](multiplayer/benchmark/method.md#result-of-the-first-round-and-arm-d2-pre-registered-9-november-2026-before-any-d2-run)). On I1 and I3: 20 of 20 with team context, 17 of 20 without, in a round where the conflict showed up in fewer control runs than expected. A small difference, not proof. On I2, D2 passed 9 of 10 and C 10 of 10. ([results](multiplayer/benchmark/intent-2026-11-09.md))
+- **Intent benchmark, second round (9 November 2026, 10 runs per arm, Haiku).** Arm D2 is the team context that ships in 0.3.0: a heads-up when an agent reads a teammate's file, a one-time check at the end of a turn when a file it depends on changed, and new wording. Its success bar was fixed before any run ([method, arm D2](docs/benchmark/method.md#result-of-the-first-round-and-arm-d2-pre-registered-9-november-2026-before-any-d2-run)). On I1 and I3: 20 of 20 with team context, 17 of 20 without, in a round where the conflict showed up in fewer control runs than expected. A small difference, not proof. On I2, D2 passed 9 of 10 and C 10 of 10. ([results](docs/benchmark/intent-2026-11-09.md))
 
 ## Install
 
@@ -66,13 +74,13 @@ claude mcp add lanes -- node <path>/dist/lanes.cjs mcp
 
 ## How it works
 
-**Lease and queue.** Each agent's hook asks the Lanes server for a lease before an edit. If another agent holds the file, the request waits first come, first served. When the lease is handed over, the waiting agent's checkout is synced first, so it edits the newer version. See [ADR-0006](docs/decisions/0006-file-level-leases-with-ttl.md), [ADR-0015](docs/decisions/0015-lease-handoff-requires-sync.md) and [ADR-0019](docs/decisions/0019-never-refuse-an-edit.md).
+**Lease and queue.** Each agent's hook asks the Lanes server for a lease before an edit. If another agent holds the file, the request waits first come, first served. When the lease is handed over, the waiting agent's checkout is synced first, so it edits the newer version. See [ADR-0006](docs/design.md#adr-0006), [ADR-0015](docs/design.md#adr-0015) and [ADR-0019](docs/design.md#adr-0019).
 
-**Sync and publish.** After each edit, the hook commits it as a checkpoint on the agent's branch and pushes it to `lanes/main` on your own git remote. A refused push means someone else was first, so the hook fetches, rebases and tries again. The Lanes server never sees code: it holds paths, names and statuses. See [ADR-0021](docs/decisions/0021-remote-integration-branch.md) and [ADR-0022](docs/decisions/0022-checkpoint-commits-on-the-agent-branch.md).
+**Sync and publish.** After each edit, the hook commits it as a checkpoint on the agent's branch and pushes it to `lanes/main` on your own git remote. A refused push means someone else was first, so the hook fetches, rebases and tries again. The Lanes server never sees code: it holds paths, names and statuses. See [ADR-0021](docs/design.md#adr-0021) and [ADR-0022](docs/design.md#adr-0022).
 
-**Team context.** With `lanes team on`, the server builds a short brief for each prompt from the tasks, leases and chat it already holds, within a 2,000-character budget. Text written by a teammate is always quoted as data with its author named, never as an instruction. See [ADR-0028](docs/decisions/0028-agents-share-team-context.md).
+**Team context.** With `lanes team on`, the server builds a short brief for each prompt from the tasks, leases and chat it already holds, within a 2,000-character budget. Text written by a teammate is always quoted as data with its author named, never as an instruction. See [ADR-0028](docs/design.md#adr-0028).
 
-The full picture: [architecture overview](docs/architecture/overview.md) and [all decisions](docs/decisions/README.md).
+The full picture: [architecture overview](docs/architecture/overview.md) and [design decisions](docs/design.md).
 
 ## Privacy
 
@@ -87,8 +95,8 @@ The full picture: [architecture overview](docs/architecture/overview.md) and [al
 
 - **Run live:** the VS Code extension, the server, the CLI, the browser app and the hooks with the real Claude Code.
 - **Built from docs, not yet run against the real agent:** the hooks and plugins for the 11 other agents, and the MCP setup for 7 more. Cursor, Copilot and Kiro edits are shared right after the edit, not queued before it.
-- **Not built yet:** end-to-end encryption for chat and requests, and a hosted server. The extension is not on the VS Code Marketplace yet.
-- "Lanes" is a working name ([ADR-0009](docs/decisions/0009-working-name.md)).
+- **Next:** the extension on the VS Code Marketplace and Open VSX. Until then, install the `.vsix` from the release.
+- **Not built yet:** end-to-end encryption for chat and requests, and a hosted server.
 
 Release notes: [CHANGELOG](packages/extension/CHANGELOG.md).
 
@@ -97,8 +105,8 @@ Release notes: [CHANGELOG](packages/extension/CHANGELOG.md).
 - [CLI reference](docs/cli.md)
 - [MCP server](docs/mcp.md)
 - [Architecture](docs/architecture/overview.md)
-- [Decisions (ADRs)](docs/decisions/README.md)
-- [Benchmark method and results](multiplayer/benchmark/method.md)
+- [Design decisions](docs/design.md)
+- [Benchmark method and results](docs/benchmark/method.md)
 
 ## Contributing
 

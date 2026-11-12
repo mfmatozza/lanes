@@ -5,7 +5,7 @@ Last updated: 1 November 2026 · Status: **protocol, published before any run** 
 We publish how we measure before we measure. No number from this benchmark goes on the site, in a deck or in an email unless it comes with this method, the raw logs and the script that produced it.
 
 ## Question
-Does Lanes team context (the brief, the heads-up and requests, [ADR-0028](../../docs/decisions/0028-agents-share-team-context.md)) change what happens when several coding agents work on one repository at once, compared with Lanes leases alone?
+Does Lanes team context (the brief, the heads-up and requests, [ADR-0028](../design.md#adr-0028)) change what happens when several coding agents work on one repository at once, compared with Lanes leases alone?
 
 ## Arms
 Same model, prompts, budgets and starting commit in every arm.
@@ -22,7 +22,7 @@ Arm A (separate worktrees, merge at the end) and a competitor arm wait for the f
 1. **Pilot (this protocol).**
    - Uses the existing runner (`scripts/runner/run.ts`, `--team` for arm D) on the spike testbed: scenarios V2 and H1, arms C and D, 3 runs each.
    - Its purpose is to check the harness and the metrics, so pilot numbers are reported as a pilot.
-   - It needs no customers (ADR-0012).
+   - It needs no customers.
 2. **Full.**
    - CooperBench two-agent tasks (arXiv:2601.13295) plus a Lanes set with 3, 5 and 10 agents on hot files.
    - At least 3 runs per task and arm.

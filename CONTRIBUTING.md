@@ -26,14 +26,14 @@ npm run build
 | `packages/cli` | The `lanes` command, including `lanes mcp` |
 | `packages/extension` | The VS Code extension. It bundles the hook, the server and the CLI |
 
-The TypeScript runs directly on Node (type stripping), so there is no compile step for tests. Architecture and the reasons behind it: [docs/architecture](docs/architecture/overview.md) and [docs/decisions](docs/decisions/README.md).
+The TypeScript runs directly on Node (type stripping), so there is no compile step for tests. Architecture and the reasons behind it: [docs/architecture](docs/architecture/overview.md) and [design decisions](docs/design.md).
 
 ## Pull requests
 
 1. Open an issue first for anything bigger than a small fix.
 2. Use [Conventional Commits](https://www.conventionalcommits.org): `fix(hook): ...`, `feat(server): ...`, `docs: ...`.
 3. Add or update tests. `npm run typecheck` and `npm test` must pass. CI runs them on Linux and Windows, and on macOS for `main`.
-4. If your change affects a doc, update the doc in the same pull request. A significant design decision gets an ADR ([template](docs/decisions/template.md)).
+4. If your change affects a doc, update the doc in the same pull request. A change to how Lanes works gets a paragraph in [docs/design.md](docs/design.md): the decision, why, and what it costs.
 5. Sign off every commit (Developer Certificate of Origin, [developercertificate.org](https://developercertificate.org)). `git commit -s` adds the line:
 
    ```

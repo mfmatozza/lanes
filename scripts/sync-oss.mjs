@@ -17,7 +17,7 @@ const REPO_URL = "https://github.com/mfmatozza/lanes";
 
 // Paths in staging that are written by hand and survive a sync.
 const KEEP = [".git", "README.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md", "CODE_OF_CONDUCT.md", ".github", "scripts/sync-oss.mjs",
-  "docs/README.md", // the public docs index; the private one links strategy and plans
+  "docs/README.md", // the public docs index, written by hand
 ];
 
 // [source path, staging path]. A directory is copied recursively, minus EXCLUDE.
@@ -34,13 +34,18 @@ const ALLOW = [
   [".gitignore", ".gitignore"],
   [".gitattributes", ".gitattributes"], // eol=lf: tests compare file contents byte for byte on Windows too
   [".github/workflows/ci.yml", ".github/workflows/ci.yml"],
-  ["docs", "docs"], // includes docs/cli.md and docs/mcp.md when present
-  ["multiplayer/benchmark", "multiplayer/benchmark"],
-  ["multiplayer/plan/architecture.md", "multiplayer/plan/architecture.md"],
-  ["multiplayer/plan/requirements.md", "multiplayer/plan/requirements.md"],
+  // Docs a user or contributor needs, nothing else: no strategy, plans, process notes or the 30 raw ADRs
+  // (docs/design.md summarises the technical decisions; links to an ADR are pointed at its entry there).
+  ["docs/cli.md", "docs/cli.md"],
+  ["docs/mcp.md", "docs/mcp.md"],
+  ["docs/design.md", "docs/design.md"],
+  ["docs/architecture", "docs/architecture"],
+  ["docs/benchmark", "docs/benchmark"],
   ["spike/testbed", "spike/testbed"], // the runner's scenarios and template repository (scripts/runner/run.ts)
   ["site/assets/shots/lanes-team-dark.webp", "docs/images/lanes-team-dark.webp"],
   ["site/assets/shots/app-dark.webp", "docs/images/app-dark.webp"],
+  ["site/assets/shots/app-lanes-dark.webp", "docs/images/app-lanes-dark.webp"],
+  ["site/assets/shots/app-light.webp", "docs/images/app-light.webp"],
 ];
 
 // Relative source paths (forward slashes) that never go public.
@@ -105,6 +110,8 @@ const SCAN_EXCEPTIONS = [
 ];
 // Text rewrites in staging after the copy, before the scan: [path, from, to, reason].
 const REWRITES = [
+  ["docs/architecture/agent-integration.md", " ([pricing validation](../strategy/pricing-validation.md), [ADR-0027](../decisions/0027-behavioural-pricing-signals.md))", "", "pricing research is private"],
+  ["docs/benchmark/method.md", " (ADR-0012)", "", "the founder ADR is private"],
   ["packages/extension/README.md", "private beta", "beta", "the beta is public now"],
   ["packages/hook/test/redact-lists.test.ts", "C:/Users/mfmat/", "C:/Users/alice/", "real user name in a path fixture; same length, so the test is unchanged"],
 ];
@@ -207,12 +214,13 @@ editJson("package-lock.json", (l) => {
 for (const [rel, from, to] of REWRITES) {
   const p = path.join(DST, rel);
   const text = fs.readFileSync(p, "utf8");
-  if (!text.includes(from)) console.log(`  rewrite no longer needed: ${rel} (${from})`);
-  fs.writeFileSync(p, text.split(from).join(to));
+  if (from instanceof RegExp ? !from.test(text) : !text.includes(from)) console.log(`  rewrite no longer needed: ${rel} (${from})`);
+  fs.writeFileSync(p, from instanceof RegExp ? text.replace(from, to) : text.split(from).join(to));
 }
 
 // Links in copied Markdown: a relative link to a path missing from staging becomes its plain text, and a link to an
 // issue of the private repository becomes "#NNN" (those issues do not exist in the public repository).
+const DESIGN = new Set([...fs.readFileSync(path.join(DST, "docs/design.md"), "utf8").matchAll(/id="adr-(\d{4})"/g)].map((m) => m[1]));
 const ISSUE = "https://github\\.com/mfmatozza/lanes/issues/(\\d+)";
 const linkCounts = [];
 for (const rel of copied.filter((r) => r.endsWith(".md"))) {
@@ -223,6 +231,8 @@ for (const rel of copied.filter((r) => r.endsWith(".md"))) {
       const issue = target.match(new RegExp(`^${ISSUE}$`));
       if (issue) { n++; return `#${issue[1]}`; }
       if (/^([a-z]+:|#)/i.test(target)) return all;
+      const adr = target.match(/(?:^|\/)(?:decisions\/)?(\d{4})-[^/#)]*\.md(?:#.*)?$/);
+      if (adr && DESIGN.has(adr[1])) { n++; return `[${label}](${path.relative(path.dirname(p), path.join(DST, "docs/design.md")).split(path.sep).join("/")}#adr-${adr[1]})`; }
       if (fs.existsSync(path.resolve(path.dirname(p), decodeURI(target.split("#")[0])))) return all;
       n++; return label;
     })

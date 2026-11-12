@@ -73,7 +73,7 @@ export const LanesPlugin = async ({ directory }) => ({
     try {
       const session = event.properties?.sessionID ?? event.properties?.info?.id;
       if (!session) return;
-      if (event.type === "session.created") later(session, await lanes("start", { session_id: session, cwd: directory }, 5000));
+      if (event.type === "session.created") later(session, await lanes("start", { session_id: session, cwd: directory }, 10000));
       else if (event.type === "session.idle") await lanes("stop", { session_id: session, cwd: directory }, 90000);
       else if (event.type === "session.deleted") await lanes("end", { session_id: session, cwd: directory }, 5000);
     } catch {}
@@ -114,7 +114,7 @@ export default function (amp) {
   const key = (event) => event.toolUseID ?? event.thread?.id + ":" + event.tool;
   amp.on("session.start", async (event) => {
     try {
-      later(event.thread.id, await lanes("start", { session_id: event.thread.id, cwd: cwd() }, 5000));
+      later(event.thread.id, await lanes("start", { session_id: event.thread.id, cwd: cwd() }, 10000));
     } catch {}
   });
   amp.on("agent.start", async (event) => {

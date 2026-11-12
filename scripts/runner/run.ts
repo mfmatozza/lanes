@@ -25,7 +25,7 @@ const RESULTS = path.join(OUT, "runs");
 // Runs the bundled hook of the packages, as the MVP ships it: `npm run build` first.
 const HOOK = path.join(ROOT, "dist", "hook.cjs");
 const REMOTE = process.argv.includes("--remote");
-// Arm D of the multiplayer benchmark (multiplayer/benchmark/method.md): team context on, committed like `lanes team on`.
+// Arm D of the multiplayer benchmark (docs/benchmark/method.md): team context on, committed like `lanes team on`.
 const TEAM = process.argv.includes("--team");
 // The arm label in results: C (leases only) or D (team context) by default; `--arm D2` names a later build of team context.
 const armAt = process.argv.indexOf("--arm");
@@ -104,12 +104,12 @@ interface AgentResult {
   asksUser: number;
 }
 
-// Fixed before any run (multiplayer/benchmark/method.md); changing it means re-running every arm.
+// Fixed before any run (docs/benchmark/method.md); changing it means re-running every arm.
 const ASKS_USER = /\b(should I|shall I|do you want me to|would you like me to|please confirm|let me know if|before I proceed)\b/i;
 
 const config: Config = JSON.parse(fs.readFileSync(path.join(TESTBED, "scenarios.json"), "utf8"));
 // Benchmark scenarios added after the spike froze (I1–I3: intent conflicts leases alone can't see), same template.
-const extra = JSON.parse(fs.readFileSync(path.join(ROOT, "multiplayer", "benchmark", "scenarios.json"), "utf8"));
+const extra = JSON.parse(fs.readFileSync(path.join(ROOT, "docs", "benchmark", "scenarios.json"), "utf8"));
 Object.assign(config.tasks, extra.tasks);
 Object.assign(config.scenarios, extra.scenarios);
 

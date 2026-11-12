@@ -137,7 +137,9 @@ describe("WS /v1/events", () => {
         s.on("data", () => s.write(encodeFrame(OP.pong, Buffer.alloc(0), true)));
         sockets.push(s);
       }
-      assert.equal((await rawUpgrade(server.url, auth)).status, 503);
+      // Refused: a 503 answer, or on a loaded Windows machine a reset before the answer is read. Either way no stream opens.
+      const refused = await rawUpgrade(server.url, auth).then((r) => r.status, (e: NodeJS.ErrnoException) => e.code);
+      assert.ok(refused === 503 || refused === "ECONNRESET", `129th connection: ${refused}`);
       await new Promise((r) => setTimeout(r, 700)); // more than 2.5 heartbeats: the real client kept answering
       assert.equal(closed, false);
       client.close();

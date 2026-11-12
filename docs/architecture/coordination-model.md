@@ -3,7 +3,7 @@
 > **Status:** Approved · **Owner:** @mfmatozza · **Last updated:** 2026-10-24
 > [Docs](../README.md) › Architecture › Coordination model · [← Overview](overview.md) · [Protocol →](protocol.md)
 
-This is the core of the product: the rules that decide **when** an edit goes ahead. They never decide *whether* it does: an edit is never refused ([ADR-0019](../decisions/0019-never-refuse-an-edit.md)).
+This is the core of the product: the rules that decide **when** an edit goes ahead. They never decide *whether* it does: an edit is never refused ([ADR-0019](../design.md#adr-0019)).
 
 ## 1. Entities
 
@@ -76,7 +76,7 @@ A file is identified by the pair **(repository ID, repo-relative path)**. This h
 | L11 | A multi-file edit is **all or nothing**: the request is granted only when every path is free (or already held by the same agent), so two multi-file edits can't deadlock. |
 | L12 | Queue limits: 4 waiters per session and 1,000 in total. Beyond that, the request returns `timeout` at once and the edit goes ahead. |
 
-> **Why one edit and not one turn or one session?** Short leases make waits last seconds, and publishing after every edit makes deadlock impossible (spike v2: 42 sessions, 0 conflicts). See [ADR-0016](../decisions/0016-non-blocking-coordination.md).
+> **Why one edit and not one turn or one session?** Short leases make waits last seconds, and publishing after every edit makes deadlock impossible (spike v2: 42 sessions, 0 conflicts). See [ADR-0016](../design.md#adr-0016).
 
 ## 4. Handoff: publish and sync
 
@@ -97,11 +97,11 @@ sequenceDiagram
     B->>B: silent sync; agent-only note: re-read the file
 ```
 
-- **Order** comes from the server; **content** comes from git ([ADR-0004](../decisions/0004-git-is-source-of-truth.md), [ADR-0021](../decisions/0021-remote-integration-branch.md)).
+- **Order** comes from the server; **content** comes from git ([ADR-0004](../design.md#adr-0004), [ADR-0021](../design.md#adr-0021)).
 - The push is a compare-and-swap: git refuses a non-fast-forward push, and the hook fetches, rebases and retries.
 - If the remote is unreachable, the edit is committed locally and pushed with the next publish. If the sync fails, the edit still goes ahead and the views flag it.
-- If two edits overlap while coordination was off, the file moves to the newer content, the older version is kept in `refs/lanes/backup/...`, and only the agent is told to re-apply its change ([ADR-0019](../decisions/0019-never-refuse-an-edit.md)).
-- Checkpoint commits stay on the **agent's branch** ([ADR-0022](../decisions/0022-checkpoint-commits-on-the-agent-branch.md)); only files the agent edited, or created during its turn, are committed ([ADR-0023](../decisions/0023-security-baseline.md)).
+- If two edits overlap while coordination was off, the file moves to the newer content, the older version is kept in `refs/lanes/backup/...`, and only the agent is told to re-apply its change ([ADR-0019](../design.md#adr-0019)).
+- Checkpoint commits stay on the **agent's branch** ([ADR-0022](../design.md#adr-0022)); only files the agent edited, or created during its turn, are committed ([ADR-0023](../design.md#adr-0023)).
 
 ## 5. Agent state machine
 
@@ -124,9 +124,9 @@ stateDiagram-v2
 ## 5a. What the agent is told
 Almost nothing. All agent-facing text is **neutral and never names a teammate** (naming one made agents mention it to their user, spike v3 round 1):
 - a note that a file changed and should be re-read (after a sync or an overlap re-apply);
-- a note that earlier commits on its branch came from the checkpoint mechanism ([ADR-0022](../decisions/0022-checkpoint-commits-on-the-agent-branch.md)).
+- a note that earlier commits on its branch came from the checkpoint mechanism ([ADR-0022](../design.md#adr-0022)).
 
-Overlaps between tasks are tracked on the server and shown in the views, **not** told to the agent ([ADR-0018](../decisions/0018-automatic-tasks-and-overlap.md), amended).
+Overlaps between tasks are tracked on the server and shown in the views, **not** told to the agent ([ADR-0018](../design.md#adr-0018), amended).
 
 ## 6. Known limitations (MVP)
 - **Shell writes** (`sed -i`, `cp`, code generators) aren't seen by edit hooks. The end-of-turn publish picks up files changed during the turn (not pre-existing dirty files, not secret-like, at most 1 MB), but they are not queued.

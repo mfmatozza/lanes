@@ -134,7 +134,7 @@ The member list can only be read on the server's machine. Elsewhere the tool lis
 
 Every tool gives the agent information or sends a message as its user. None of them decides anything for a person. In particular, there is no tool to approve or decline a request: a teammate's request reaches an agent only after its own user approves it, with `lanes approve`, the VS Code Team view or the browser app.
 
-This follows [ADR-0028](decisions/0028-agents-share-team-context.md):
+This follows [ADR-0028](design.md#adr-0028):
 
 - Text written by a teammate (chat, requests) is untrusted input to another person's agent. It is always quoted as data with its author named, and it is never phrased as an instruction.
 - A request is acted on only after the receiving user approves it. If an agent could approve, a message from a teammate could get an agent to accept work its user never saw.

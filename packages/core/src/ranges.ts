@@ -3,7 +3,7 @@ import type { LineRange } from "./types.ts";
 
 /** Ranges kept per file. */
 export const MAX_RANGES = 50;
-/** Changes this close count as one overlap: adjacent changes conflict in a line merge too (multiplayer/benchmark/method.md). */
+/** Changes this close count as one overlap: adjacent changes conflict in a line merge too (docs/benchmark/method.md). */
 export const NEAR_LINES = 3;
 
 /** Sorted, with touching or overlapping ranges merged; past `max`, the tail collapses into one range, so nothing is dropped. */

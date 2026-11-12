@@ -165,42 +165,54 @@ function gitIdentity(root: string): { name?: string; email?: string } {
   return entry;
 }
 const stateFile = (sessionId: string) => path.join(privateDir("sessions"), `${sessionId.replace(/[^\w-]/g, "")}.json`);
+const sleepSync = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
 export function loadState(sessionId: string): SessionState {
-  let text: string;
-  try {
-    text = fs.readFileSync(stateFile(sessionId), "utf8");
-  } catch {
-    return { touched: [] }; // no state yet
-  }
-  try {
-    return { touched: [], ...JSON.parse(text) };
-  } catch {
-    // Unreadable: keep it for inspection instead of silently starting over as if nothing was recorded (#83).
+  // A parse failure is read again first: saveState's in-place fallback (below) can be caught half-written for a moment.
+  for (let attempt = 0; ; attempt++) {
+    let text: string;
     try {
-      fs.renameSync(stateFile(sessionId), stateFile(sessionId) + ".corrupt");
+      text = fs.readFileSync(stateFile(sessionId), "utf8");
     } catch {
-      // best effort
+      return { touched: [] }; // no state yet
     }
-    return { touched: [] };
+    try {
+      return { touched: [], ...JSON.parse(text) };
+    } catch {
+      if (attempt < 5) { sleepSync(15); continue; }
+      // Unreadable: keep it for inspection instead of silently starting over as if nothing was recorded (#83).
+      try {
+        fs.renameSync(stateFile(sessionId), stateFile(sessionId) + ".corrupt");
+      } catch {
+        // best effort
+      }
+      return { touched: [] };
+    }
   }
 }
-// Temp file + rename: a concurrent reader sees the old or the new file, never half of one (#83).
+// Temp file + rename, so a concurrent reader sees the old or the new file (#83). Windows refuses to rename over a file
+// another process has open, and parallel hooks read the state without the lock (`post` reads the turn's bases): after
+// about a second of retries the update is written in place instead, which an open reader does not block. A reader that
+// catches it half-written reads again (loadState). Losing the update would cost the edit's publish (#255).
 function saveState(sessionId: string, state: SessionState): void {
   const file = stateFile(sessionId);
   const tmp = `${file}.${process.pid}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(state), { mode: 0o600 });
-  // Windows refuses to rename over a file another process has open, and a parallel hook reads the state without the lock
-  // (`post` reads the turn's bases): retry briefly instead of losing the update and the edit's publish (#255).
+  const json = JSON.stringify(state);
+  fs.writeFileSync(tmp, json, { mode: 0o600 });
   for (let attempt = 0; ; attempt++) {
     try {
       return fs.renameSync(tmp, file);
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code;
-      if (attempt >= 100 || !(code === "EPERM" || code === "EBUSY" || code === "EACCES")) {
+      if (!(code === "EPERM" || code === "EBUSY" || code === "EACCES")) {
         fs.rmSync(tmp, { force: true });
         throw err;
       }
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20);
+      if (attempt >= 50) {
+        fs.rmSync(tmp, { force: true });
+        return fs.writeFileSync(file, json, { mode: 0o600 });
+      }
+      sleepSync(20);
     }
   }
 }
