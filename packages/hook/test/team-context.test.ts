@@ -116,3 +116,29 @@ test("LANES_OFF=1 (a headless run of an approved request): the hook does nothing
   assert.equal(server.coordinator.snapshot().leases.length, before);
   assert.ok(!server.coordinator.snapshot().agents.some((a) => a.sessionId === "s-off"));
 });
+
+test("on: a teammate's change that a pre-edit sync brings in still blocks the turn end once (timing sweep, 12 Nov)", async () => {
+  const call = (session: string, cwd: string, rel: string, tool = "Edit") => ({ session_id: session, cwd, tool_name: tool, tool_input: { file_path: path.join(cwd, ...rel.split("/")) } });
+  for (const wt of Object.values(repo.wt)) {
+    fs.mkdirSync(path.join(wt, ".lanes"), { recursive: true });
+    fs.writeFileSync(path.join(wt, ".lanes", "team.json"), JSON.stringify({ context: true }));
+  }
+  // bea's turn starts and she reads a file ana is about to change.
+  assert.equal((await runHook("prompt", { session_id: "s-bea-sync", cwd: repo.wt.bea, prompt: "Add src/caller.ts" }, env("bea"))).code, 0);
+  assert.equal((await runHook("read", call("s-bea-sync", repo.wt.bea, "src/routes.ts", "Read"), env("bea"))).code, 0);
+  // ana changes it and publishes.
+  assert.equal((await runHook("pre", call("s-ana-sync", repo.wt.ana, "src/routes.ts"), env("ana"))).code, 0);
+  fs.writeFileSync(path.join(repo.wt.ana, "src", "routes.ts"), "export const paths = [\n  \"/\",\n];\n");
+  assert.equal((await runHook("post", call("s-ana-sync", repo.wt.ana, "src/routes.ts"), env("ana"))).code, 0);
+  assert.equal((await runHook("stop", { session_id: "s-ana-sync", cwd: repo.wt.ana }, env("ana"))).code, 0);
+  // bea's first write syncs ana's change into her checkout before the write: no publish of hers pulls it later.
+  assert.equal((await runHook("pre", call("s-bea-sync", repo.wt.bea, "src/caller.ts", "Write"), env("bea"))).code, 0);
+  assert.match(fs.readFileSync(path.join(repo.wt.bea, "src", "routes.ts"), "utf8"), /paths/, "the pre-edit sync brought ana's change in");
+  fs.writeFileSync(path.join(repo.wt.bea, "src", "caller.ts"), "import { routes } from \"./routes.ts\";\nexport const n = routes.length;\n");
+  assert.equal((await runHook("post", call("s-bea-sync", repo.wt.bea, "src/caller.ts", "Write"), env("bea"))).code, 0);
+  const stop = await runHook("stop", { session_id: "s-bea-sync", cwd: repo.wt.bea }, env("bea"));
+  assert.equal(stop.code, 0, stop.stderr);
+  const out = JSON.parse(stop.stdout);
+  assert.equal(out.decision, "block");
+  assert.match(out.reason, /src\/routes\.ts, which your code uses/);
+});

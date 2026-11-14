@@ -494,12 +494,17 @@ async function main(): Promise<void> {
   const dry = argv.includes("--dry");
   const runsFlag = argv.indexOf("--runs");
   const runsOverride = runsFlag >= 0 ? Number(argv[runsFlag + 1]) : undefined;
-  const ids = argv.filter((a, i) => /^[A-Z]\d+$/.test(a) && !["--runs", "--arm"].includes(argv[i - 1]));
+  // Timing sweep (method.md): `--delay N` restarts every delayed agent N s after the first; the value lands in summary.json.
+  const delayFlag = argv.indexOf("--delay");
+  const delayOverride = delayFlag >= 0 ? Number(argv[delayFlag + 1]) : undefined;
+  const ids = argv.filter((a, i) => /^[A-Z]\d+$/.test(a) && !["--runs", "--arm", "--delay"].includes(argv[i - 1]));
   if (ids.length === 0) throw new Error(`Usage: node runner/run.ts V1 [V2 ...] [--runs N] [--dry]. Scenarios: ${Object.keys(config.scenarios).join(", ")}`);
   fs.mkdirSync(RESULTS, { recursive: true });
   for (const id of ids) {
-    const scenario = config.scenarios[id];
-    if (!scenario) throw new Error(`Unknown scenario ${id}`);
+    const base = config.scenarios[id];
+    if (!base) throw new Error(`Unknown scenario ${id}`);
+    const scenario = delayOverride === undefined ? base
+      : { ...base, agents: base.agents.map((a) => (a.delaySec === undefined ? a : { ...a, delaySec: delayOverride })) };
     for (let run = 1; run <= (runsOverride ?? scenario.runs); run++) await runOnce(id, scenario, run, dry);
   }
 }

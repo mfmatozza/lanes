@@ -653,7 +653,12 @@ async function run(event: HookEvent, input: HookInput, config: Config): Promise<
     }
     if (behind) {
       const before = fileHash(abs);
+      const head = tryGit(loc.repo.root, ["rev-parse", "HEAD"]);
       const synced = await withLock(checkoutLock(loc.repo.root), () => syncFromIntegration(loc.repo.root, identity(loc.repo), sessionId), LOCK_WAIT_MS);
+      // Team context: what this sync brought in counts as arrived, or the turn-end stale check never sees a rename that
+      // landed before this write (timing sweep, 12 Nov: bea's new caller kept the old name, staleBlocks 0).
+      const came = synced.ok && head && teamContextOn(loc.repo.root) ? (tryGit(loc.repo.root, ["diff", "--name-only", "--no-renames", head, "HEAD"]) ?? "").split("\n").filter(Boolean) : [];
+      if (came.length > 0) await updateState(sessionId, (s) => void (s.arrived = [...new Set([...(s.arrived ?? []), ...came])].slice(-500)));
       if (!synced.ok) {
         // Not refused either: the edit is committed locally and can't be lost; the views flag it.
         if (!synced.skipped) await observe(loc.repo, { kind: "sync-failed", path: loc.path, error: synced.error }); // skipped: another agent is mid-edit in this checkout, momentary
